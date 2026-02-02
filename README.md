@@ -1,50 +1,92 @@
-# Welcome to your Expo app 👋
+# FAI-nder
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+FAI-nder è un progetto **open source** che raccoglie e rende consultabili, in forma geografica, alcuni luoghi e attività presenti sulla piattaforma pubblica del Fondo Ambiente Italiano (FAI).
 
-## Get started
+Il progetto nasce con l’obiettivo di **facilitare la ricerca e la scoperta** di luoghi di interesse culturale, storico e territoriale, attraverso una rappresentazione su mappa semplice e accessibile.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## 🎯 Obiettivo del progetto
 
-2. Start the app
+FAI-nder ha uno scopo **puramente informativo e sperimentale**:
 
-   ```bash
-   npx expo start
-   ```
+- aggregare dati pubblicamente accessibili
+- trasformarli in un formato leggero (JSON) adatto a mappe e applicazioni
+- consentire la consultazione rapida dei luoghi tramite coordinate geografiche
+- rimandare sempre alla pagina ufficiale del luogo sul sito FAI
 
-In the output, you'll find options to open the app in a
+Il progetto **non sostituisce**, **non replica** e **non intende competere** con i servizi ufficiali del FAI.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## 📦 Contenuto del repository
 
-## Get a fresh project
+Il repository include:
 
-When you're ready, run:
+- uno script di scraping che interroga le API pubbliche del FAI
+- un file JSON generato automaticamente contenente:
+  - coordinate geografiche
+  - nome del luogo
+  - link alla pagina ufficiale FAI
+- una semplice applicazione che utilizza questi dati per mostrarli su mappa
 
-```bash
-npm run reset-project
-```
+Il file JSON viene aggiornato automaticamente tramite GitHub Actions.
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
+## 🔗 Fonte dei dati
 
-To learn more about developing your project with Expo, look at the following resources:
+I dati provengono esclusivamente da **endpoint pubblici** della piattaforma:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+https://platform.fondoambiente.it
 
-## Join the community
+Vengono utilizzate **solo informazioni già accessibili pubblicamente**, senza autenticazione, login o aggiramento di sistemi di protezione.
 
-Join our community of developers creating universal apps.
+---
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## ⚠️ Disclaimer e dissociazione
+
+Questo progetto **NON è affiliato, sponsorizzato o approvato** dal Fondo Ambiente Italiano (FAI).
+
+- Il nome “FAI” è di proprietà del Fondo Ambiente Italiano.
+- Tutti i contenuti testuali, multimediali e informativi restano di proprietà dei rispettivi titolari.
+- FAI-nder si limita a **rimandare alle pagine ufficiali** del sito FAI, senza duplicarne i contenuti.
+
+Se il FAI o altri titolari dei diritti ritengono che questo progetto violi in qualsiasi modo le loro policy, sono invitati a contattare l’autore per una rapida rimozione o modifica.
+
+---
+
+## 🧭 Utilizzo dei dati
+
+I dati generati da questo progetto sono destinati a:
+
+- ricerca
+- sperimentazione
+- visualizzazione geografica
+- uso educativo e non commerciale
+
+Non è garantita l’accuratezza, completezza o attualità delle informazioni.
+
+---
+
+## 🛠️ Tecnologie utilizzate
+
+- Python (scraping e normalizzazione dati)
+- GitHub Actions (aggiornamento automatico)
+- JSON / GeoJSON
+- Applicazione web client-side per la visualizzazione
+
+---
+
+## 📜 Licenza
+
+Il codice del progetto è distribuito sotto licenza **MIT**.  
+I dati rimangono soggetti alle condizioni d’uso del sito di origine.
+
+---
+
+## ✉️ Contatti
+
+Per segnalazioni, richieste o problemi:
+- apri una **Issue** su GitHub
+- oppure contatta l’autore tramite il profilo GitHub
