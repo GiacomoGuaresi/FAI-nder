@@ -2,7 +2,18 @@
 
 FAI-nder è un progetto **open source** che raccoglie e rende consultabili, in forma geografica, alcuni luoghi e attività presenti sulla piattaforma pubblica del Fondo Ambiente Italiano (FAI).
 
-Il progetto nasce con l’obiettivo di **facilitare la ricerca e la scoperta** di luoghi di interesse culturale, storico e territoriale, attraverso una rappresentazione su mappa semplice e accessibile.
+Il progetto nasce con l'obiettivo di **facilitare la ricerca e la scoperta** di luoghi di interesse culturale, storico e territoriale, attraverso una rappresentazione su mappa semplice e accessibile.
+
+## 📱 App Mobile
+
+FAI-nder include un'applicazione mobile nativa per iOS e Android che permette di:
+
+- **Esplorare la mappa** dei beni FAI con la propria posizione
+- **Tracciare i luoghi visitati** con un sistema di check-in
+- **Visualizzare i dettagli** di ogni bene e accedere alla pagina ufficiale FAI
+- **Consultare la propria "Carta FAI"** con le statistiche di progresso
+
+L'app è sviluppata con React Native/Expo e offre un'esperienza utente ottimizzata per dispositivi mobili.
 
 ---
 
@@ -71,9 +82,18 @@ Non è garantita l’accuratezza, completezza o attualità delle informazioni.
 
 ## 🛠️ Tecnologie utilizzate
 
+### Backend e Dati
 - Python (scraping e normalizzazione dati)
 - GitHub Actions (aggiornamento automatico)
 - JSON / GeoJSON
+
+### App Mobile
+- React Native con Expo
+- React Native Maps per la visualizzazione geografica
+- AsyncStorage per il tracciamento locale
+- Expo Location per i servizi di geolocalizzazione
+
+### Web
 - Applicazione web client-side per la visualizzazione
 
 ---
