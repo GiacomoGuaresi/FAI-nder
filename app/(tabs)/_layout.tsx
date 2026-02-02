@@ -9,7 +9,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 function CustomHeader() {
   return (
     <View style={styles.header}>
-      <IconSymbol size={32} name="location.fill" color="#e74f30" />
+      <IconSymbol size={32} name="location.fill" color="white" />
       <Text style={styles.headerTitle}>FAInder</Text>
     </View>
   );
@@ -17,18 +17,19 @@ function CustomHeader() {
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: 'white',
+    backgroundColor: '#e74f30',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingTop: 40,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: 'white',
     marginLeft: 12,
   },
 });
@@ -39,12 +40,12 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#ffffff',
-        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.6)',
+        tabBarActiveTintColor: '#e74f30',
+        tabBarInactiveTintColor: 'rgba(231, 79, 48, 0.6)',
         tabBarStyle: {
-          backgroundColor: '#e74f30',
+          backgroundColor: 'white',
         },
-        tabBarActiveBackgroundColor: 'rgba(255, 255, 255, 0.1)',
+        tabBarActiveBackgroundColor: 'rgba(231, 79, 48, 0.1)',
         headerShown: true,
         header: () => <CustomHeader />,
         headerStyle: {
