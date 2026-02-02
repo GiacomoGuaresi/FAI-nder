@@ -1,8 +1,8 @@
-name: Aggiorna beni FAI
+name: Update beni FAI
 
 on:
   schedule:
-    - cron: "0 3 1 * *" # ogni primo del mese alle 03:00
+    - cron: "0 3 * * 1"   # ogni lunedì alle 03:00
   workflow_dispatch:
 
 jobs:
@@ -10,24 +10,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          node-version: 18
+          python-version: "3.11"
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install deps
+        run: pip install requests
 
       - name: Fetch beni FAI
-        run: node scripts/fetchBeniFAI.js
+        run: python scripts/fetch_beni_fai.py
 
-      - name: Commit aggiornamenti
+      - name: Commit & push
         run: |
           git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git add data/beni.json
-          git commit -m "Aggiornamento beni FAI" || echo "Nessuna modifica"
+          git config user.email "github-actions@github.com"
+          git add data/beni-fai.json
+          git commit -m "update beni FAI" || exit 0
           git push
