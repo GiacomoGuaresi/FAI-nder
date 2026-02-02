@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import * as WebBrowser from 'expo-web-browser';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 
 interface FaiPoint {
@@ -12,6 +12,12 @@ interface FaiPoint {
   lat: number;
   lng: number;
   url: string;
+}
+
+interface SearchResult {
+  display_name: string;
+  lat: string;
+  lon: string;
 }
 
 const FAI_DATA_URL = 'https://raw.githubusercontent.com/GiacomoGuaresi/FAI-nder/refs/heads/main/data/beni-fai.json';
@@ -24,6 +30,11 @@ export default function MapScreen() {
   const [faiPoints, setFaiPoints] = useState<FaiPoint[]>([]);
   const [visitedIds, setVisitedIds] = useState<Set<number>>(new Set());
   const [selectedPoint, setSelectedPoint] = useState<FaiPoint | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
     (async () => {
@@ -83,6 +94,86 @@ export default function MapScreen() {
     await WebBrowser.openBrowserAsync(url);
   };
 
+  const searchLocation = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=it`,
+        {
+          headers: {
+            'User-Agent': 'FAI-nder/1.0 (giacomoguaresi.dev@gmail.com)'
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      
+      if (!text || text.trim() === '') {
+        setSearchResults([]);
+        setShowSearchResults(true);
+        return;
+      }
+      
+      try {
+        const data: SearchResult[] = JSON.parse(text);
+        setSearchResults(data);
+        setShowSearchResults(true);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError, 'Response text:', text);
+        setSearchResults([]);
+        setShowSearchResults(true);
+      }
+    } catch (error) {
+      console.error('Error searching location:', error);
+      setSearchResults([]);
+      setShowSearchResults(true);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleSearchResultPress = (result: SearchResult) => {
+    const lat = parseFloat(result.lat);
+    const lng = parseFloat(result.lon);
+    
+    const newRegion = {
+      latitude: lat,
+      longitude: lng,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    };
+    
+    if (mapRef.current) {
+      mapRef.current.animateToRegion(newRegion, 1000);
+    }
+    
+    setShowSearchResults(false);
+    setSearchQuery(result.display_name);
+  };
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery) {
+        searchLocation(searchQuery);
+      } else {
+        setSearchResults([]);
+        setShowSearchResults(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
   if (locationLoading || pointsLoading) {
     return (
       <View style={styles.center}>
@@ -101,7 +192,46 @@ export default function MapScreen() {
 
   return (
     <View style={{ flex: 1 }}>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Cerca un indirizzo o luogo..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onFocus={() => searchQuery && setShowSearchResults(true)}
+          />
+          {searchLoading && (
+            <ActivityIndicator size="small" color="#007AFF" style={styles.searchLoading} />
+          )}
+        </View>
+        
+        {showSearchResults && (
+          <View style={styles.searchResultsContainer}>
+            {searchResults.length > 0 ? (
+              searchResults.map((result, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.searchResultItem}
+                  onPress={() => handleSearchResultPress(result)}
+                >
+                  <Ionicons name="location" size={16} color="#007AFF" style={styles.resultIcon} />
+                  <Text style={styles.searchResultText}>{result.display_name}</Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.noResultsContainer}>
+                <Text style={styles.noResultsText}>Nessun risultato trovato</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+
       <MapView
+        ref={mapRef}
         style={styles.map}
         showsUserLocation
         initialRegion={{
@@ -212,6 +342,71 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+  },
+  searchContainer: {
+    position: 'absolute',
+    top: 10,
+    left: 16,
+    right: 66,
+    zIndex: 1,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 4,
+  },
+  searchLoading: {
+    marginLeft: 8,
+  },
+  searchResultsContainer: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+    maxHeight: 200,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  resultIcon: {
+    marginRight: 12,
+  },
+  searchResultText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+  },
+  noResultsContainer: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  noResultsText: {
+    fontSize: 14,
+    color: '#666',
   },
   modalOverlay: {
     flex: 1,
