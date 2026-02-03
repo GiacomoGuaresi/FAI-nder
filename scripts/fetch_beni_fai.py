@@ -2,6 +2,7 @@ import requests
 import json
 import logging
 import warnings
+import re
 from pathlib import Path
 from time import sleep
 from urllib3.exceptions import NotOpenSSLWarning
@@ -20,6 +21,23 @@ log = logging.getLogger("FAI")
 BASE_URL = "https://platform.fondoambiente.it/api/luoghi/faixme"
 OUT_FILE = Path("data/beni-fai.json")
 PER_PAGE = 300
+
+
+def clean_html(html_text):
+    """Rimuove i tag HTML dal testo e pulisce il contenuto."""
+    if not html_text:
+        return None
+    
+    # Rimuovi i tag HTML
+    text = re.sub(r'<[^>]+>', '', html_text)
+    
+    # Pulisci spazi multipli e caratteri speciali
+    text = re.sub(r'\s+', ' ', text).strip()
+    
+    # Rimuovi caratteri di escape
+    text = text.replace('\r', '').replace('\n', ' ')
+    
+    return text if text else None
 
 
 def main():
@@ -70,12 +88,16 @@ def main():
                 log.debug(f"❌ Luogo {lid} senza coordinate")
                 continue
 
+            # Pulisci la descrizione HTML
+            descrizione_pulita = clean_html(item.get("descrizione_html"))
+
             luoghi[lid] = {
                 "id": lid,
                 "title": luogo["nome"],
                 "lat": lat,
                 "lng": lng,
                 "url": f"https://fondoambiente.it/luoghi/{luogo['slug']}",
+                "description": descrizione_pulita,
             }
 
             log.info(f"📍 Aggiunto luogo: {luogo['nome']}")
