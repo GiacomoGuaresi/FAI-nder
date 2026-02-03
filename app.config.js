@@ -17,6 +17,7 @@ module.exports = {
     },
 
     android: {
+      package: "com.jack_up98.fainder",
       versionCode: Number(process.env.ANDROID_VERSION_CODE || 1),
 
       adaptiveIcon: {
@@ -26,7 +27,11 @@ module.exports = {
         monochromeImage: "./assets/images/android-icon-monochrome.png"
       },
       edgeToEdgeEnabled: true,
-      predictiveBackGestureEnabled: false
+      predictiveBackGestureEnabled: false,
+      buildOptions: {
+        kotlinCompilerExtensionVersion: "1.5.8"
+      },
+      fileSystemAuthority: "com.jack_up98.fainder.filesystem"
     },
 
     web: {
@@ -53,6 +58,12 @@ module.exports = {
     experiments: {
       typedRoutes: true,
       reactCompiler: true
+    },
+
+    extra: {
+      eas: {
+        projectId: "2901ca88-27e2-4070-b8ea-3f9b77de1994"
+      }
     }
   }
 };
