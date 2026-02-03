@@ -41,42 +41,28 @@ jobs:
           npm version ${{ inputs.release_type }} --no-git-tag-version
           echo "ANDROID_VERSION_CODE=${{ github.run_number }}" >> $GITHUB_ENV
 
-      - name: Build APK with EAS (JSON output)
+      - name: Build APK with EAS
         run: |
           eas build \
             --platform android \
             --profile production \
-            --non-interactive \
-            --json > build.json
+            --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Extract build ID
+      - name: Download APK (compatibile con EAS vecchio)
         run: |
-          echo "Build JSON:"
-          cat build.json
+          eas build:download --platform android
 
-          BUILD_ID=$(jq -r '.[0].id' build.json)
+          echo "Searching for APK..."
+          APK_PATH=$(find . -type f -name "*.apk" | head -n 1)
 
-          if [ -z "$BUILD_ID" ] || [ "$BUILD_ID" = "null" ]; then
-            echo "❌ Build ID not found"
+          if [ -z "$APK_PATH" ]; then
+            echo "❌ APK not found"
             exit 1
           fi
 
-          echo "BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
-          echo "Build ID: $BUILD_ID"
-
-      - name: Download APK
-        run: |
-          eas build:download \
-            --latest \
-            --platform android \
-            --path app.apk
-
-          if [ ! -f app.apk ]; then
-            echo "❌ APK not downloaded"
-            exit 1
-          fi
+          mv "$APK_PATH" app.apk
 
           echo "✅ APK downloaded:"
           ls -lh app.apk
