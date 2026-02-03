@@ -19,12 +19,12 @@ module.exports = {
     android: {
       package: "com.jack_up98.fainder",
       versionCode: Number(process.env.ANDROID_VERSION_CODE || 1),
+      icon: "./assets/images/icon.png",
 
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
         foregroundImage: "./assets/images/android-icon-foreground.png",
-        backgroundImage: "./assets/images/android-icon-background.png",
-        monochromeImage: "./assets/images/android-icon-monochrome.png"
+        backgroundImage: "./assets/images/android-icon-background.png"
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,

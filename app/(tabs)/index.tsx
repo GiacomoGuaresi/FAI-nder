@@ -6,6 +6,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
+import { ErrorBoundary } from '@/components/error-boundary';
+
+
 interface FaiPoint {
   id: number;
   title: string;
@@ -302,15 +305,21 @@ export default function MapScreen() {
 
   useEffect(() => {
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setLocationLoading(false);
-        return;
-      }
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Location permission not granted');
+          setLocationLoading(false);
+          return;
+        }
 
-      const loc = await Location.getCurrentPositionAsync({});
-      setLocation(loc);
-      setLocationLoading(false);
+        const loc = await Location.getCurrentPositionAsync({});
+        setLocation(loc);
+      } catch (error) {
+        console.error('Error getting location:', error);
+      } finally {
+        setLocationLoading(false);
+      }
     })();
   }, []);
 
@@ -352,23 +361,31 @@ export default function MapScreen() {
       
       // Send update message to WebView to change marker color
       if (mapRef.current) {
-        mapRef.current.postMessage(JSON.stringify({
-          type: 'updateMarker',
-          data: {
-            id: id,
-            isVisited: newSet.has(id)
-          }
-        }));
+        try {
+          mapRef.current.postMessage(JSON.stringify({
+            type: 'updateMarker',
+            data: {
+              id: id,
+              isVisited: newSet.has(id)
+            }
+          }));
+        } catch (error) {
+          console.error('Error sending message to WebView:', error);
+        }
       }
       
       // Find the point and center map on it
       const point = faiPoints.find(p => p.id === id);
       if (point && mapRef.current) {
-        mapRef.current.postMessage(JSON.stringify({
-          type: 'setCenter',
-          lat: point.lat,
-          lng: point.lng
-        }));
+        try {
+          mapRef.current.postMessage(JSON.stringify({
+            type: 'setCenter',
+            lat: point.lat,
+            lng: point.lng
+          }));
+        } catch (error) {
+          console.error('Error sending center message to WebView:', error);
+        }
       }
       
       AsyncStorage.setItem(VISITED_STORAGE_KEY, JSON.stringify([...newSet]));
@@ -446,12 +463,16 @@ export default function MapScreen() {
   };
 
   const handleWebViewMessage = (event: any) => {
-    const data = JSON.parse(event.nativeEvent.data);
-    if (data.type === 'markerPress') {
-      const point = faiPoints.find(p => p.id === data.data.id);
-      if (point) {
-        setSelectedPoint(point);
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'markerPress') {
+        const point = faiPoints.find(p => p.id === data.data.id);
+        if (point) {
+          setSelectedPoint(point);
+        }
       }
+    } catch (error) {
+      console.error('Error parsing WebView message:', error);
     }
   };
 
@@ -495,135 +516,137 @@ export default function MapScreen() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Cerca un indirizzo o luogo..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={() => {
-              if (searchQuery.trim()) {
-                searchLocation(searchQuery);
-              }
-            }}
-            onBlur={() => {
-              if (searchQuery.trim()) {
-                searchLocation(searchQuery);
-              }
-            }}
-          />
-          {searchLoading && (
-            <ActivityIndicator size="small" color="#007AFF" style={styles.searchLoading} />
-          )}
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={() => {
-                setSearchQuery('');
-                setSearchResults([]);
+    <ErrorBoundary>
+      <View style={{ flex: 1 }}>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Cerca un indirizzo o luogo..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={() => {
+                if (searchQuery.trim()) {
+                  searchLocation(searchQuery);
+                }
               }}
-            >
-              <Ionicons name="close-circle" size={16} color="#666" />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      <WebView
-        ref={mapRef}
-        style={styles.map}
-        source={{ html: generateMapHTML(faiPoints, new Set(), location || undefined) }}
-        onMessage={handleWebViewMessage}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        startInLoadingState={true}
-        key={`${faiPoints.length}-${location?.coords.latitude}-${location?.coords.longitude}`}
-        renderLoading={() => (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.loadingText}>Caricamento mappa...</Text>
+              onBlur={() => {
+                if (searchQuery.trim()) {
+                  searchLocation(searchQuery);
+                }
+              }}
+            />
+            {searchLoading && (
+              <ActivityIndicator size="small" color="#007AFF" style={styles.searchLoading} />
+            )}
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => {
+                  setSearchQuery('');
+                  setSearchResults([]);
+                }}
+              >
+                <Ionicons name="close-circle" size={16} color="#666" />
+              </TouchableOpacity>
+            )}
           </View>
-        )}
-      />
-      
-      <Modal
-        visible={selectedPoint !== null}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setSelectedPoint(null)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1}
-          onPress={() => setSelectedPoint(null)}
+        </View>
+
+        <WebView
+          ref={mapRef}
+          style={styles.map}
+          source={{ html: generateMapHTML(faiPoints, new Set(), location || undefined) }}
+          onMessage={handleWebViewMessage}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          startInLoadingState={true}
+          key={`${faiPoints.length}-${location?.coords.latitude}-${location?.coords.longitude}`}
+          renderLoading={() => (
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color="#007AFF" />
+              <Text style={styles.loadingText}>Caricamento mappa...</Text>
+            </View>
+          )}
+        />
+        
+        <Modal
+          visible={selectedPoint !== null}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setSelectedPoint(null)}
         >
           <TouchableOpacity 
-            style={styles.modalContent}
+            style={styles.modalOverlay} 
             activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
+            onPress={() => setSelectedPoint(null)}
           >
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setSelectedPoint(null)}
+            <TouchableOpacity 
+              style={styles.modalContent}
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
             >
-              <Ionicons name="close" size={16} color="#666" />
-            </TouchableOpacity>
-            
-            <Text style={styles.modalTitle}>{selectedPoint?.title}</Text>
-            {selectedPoint?.description ? (
-              <Text style={styles.modalDescription}>{selectedPoint.description}</Text>
-            ) : (
-              <Text style={styles.modalDescriptionPlaceholder}>Nessuna descrizione disponibile</Text>
-            )}
-            {selectedPoint && visitedIds.has(selectedPoint.id) && (
-              <View style={styles.visitedBadge}>
-                <Ionicons name="checkmark" size={12} color="#4CAF50" />
-                <Text style={styles.visitedBadgeText}> Già visitato</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setSelectedPoint(null)}
+              >
+                <Ionicons name="close" size={16} color="#666" />
+              </TouchableOpacity>
+              
+              <Text style={styles.modalTitle}>{selectedPoint?.title}</Text>
+              {selectedPoint?.description ? (
+                <Text style={styles.modalDescription}>{selectedPoint.description}</Text>
+              ) : (
+                <Text style={styles.modalDescriptionPlaceholder}>Nessuna descrizione disponibile</Text>
+              )}
+              {selectedPoint && visitedIds.has(selectedPoint.id) && (
+                <View style={styles.visitedBadge}>
+                  <Ionicons name="checkmark" size={12} color="#4CAF50" />
+                  <Text style={styles.visitedBadgeText}> Già visitato</Text>
+                </View>
+              )}
+              
+              <View style={styles.modalButtonRow}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.visitButton]}
+                  onPress={() => {
+                    if (selectedPoint) {
+                      toggleVisited(selectedPoint.id);
+                    }
+                  }}
+                >
+                  <View style={styles.buttonContent}>
+                    <Ionicons 
+                      name={selectedPoint && visitedIds.has(selectedPoint.id) ? "close-circle" : "checkmark-circle"} 
+                      size={16} 
+                      color="white" 
+                    />
+                    <Text style={styles.modalButtonText}>
+                      {selectedPoint && visitedIds.has(selectedPoint.id) ? 'Non visitato' : 'Visitato'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.detailsButton]}
+                  onPress={() => {
+                    if (selectedPoint) {
+                      openInBrowser(selectedPoint.url);
+                    }
+                  }}
+                >
+                  <View style={styles.buttonContent}>
+                    <Ionicons name="globe" size={16} color="white" />
+                    <Text style={styles.modalButtonText}>Dettagli</Text>
+                  </View>
+                </TouchableOpacity>
               </View>
-            )}
-            
-            <View style={styles.modalButtonRow}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.visitButton]}
-                onPress={() => {
-                  if (selectedPoint) {
-                    toggleVisited(selectedPoint.id);
-                  }
-                }}
-              >
-                <View style={styles.buttonContent}>
-                  <Ionicons 
-                    name={selectedPoint && visitedIds.has(selectedPoint.id) ? "close-circle" : "checkmark-circle"} 
-                    size={16} 
-                    color="white" 
-                  />
-                  <Text style={styles.modalButtonText}>
-                    {selectedPoint && visitedIds.has(selectedPoint.id) ? 'Non visitato' : 'Visitato'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.detailsButton]}
-                onPress={() => {
-                  if (selectedPoint) {
-                    openInBrowser(selectedPoint.url);
-                  }
-                }}
-              >
-                <View style={styles.buttonContent}>
-                  <Ionicons name="globe" size={16} color="white" />
-                  <Text style={styles.modalButtonText}>Dettagli</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </ErrorBoundary>
   );
 }
 
