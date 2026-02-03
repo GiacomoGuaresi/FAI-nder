@@ -12,6 +12,7 @@ interface FaiPoint {
   lat: number;
   lng: number;
   url: string;
+  description?: string;
 }
 
 interface SearchResult {
@@ -573,6 +574,11 @@ export default function MapScreen() {
             </TouchableOpacity>
             
             <Text style={styles.modalTitle}>{selectedPoint?.title}</Text>
+            {selectedPoint?.description ? (
+              <Text style={styles.modalDescription}>{selectedPoint.description}</Text>
+            ) : (
+              <Text style={styles.modalDescriptionPlaceholder}>Nessuna descrizione disponibile</Text>
+            )}
             {selectedPoint && visitedIds.has(selectedPoint.id) && (
               <View style={styles.visitedBadge}>
                 <Ionicons name="checkmark" size={12} color="#4CAF50" />
@@ -748,6 +754,20 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: 'center',
     color: '#333',
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  modalDescriptionPlaceholder: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginBottom: 12,
+    fontStyle: 'italic',
   },
   visitedBadge: {
     flexDirection: 'row',
