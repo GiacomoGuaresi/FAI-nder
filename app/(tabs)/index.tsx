@@ -4,7 +4,7 @@ import * as Location from 'expo-location';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 
 interface FaiPoint {
   id: number;
@@ -23,6 +23,269 @@ interface SearchResult {
 const FAI_DATA_URL = 'https://raw.githubusercontent.com/GiacomoGuaresi/FAI-nder/refs/heads/main/data/beni-fai.json';
 const VISITED_STORAGE_KEY = 'fai_visited_places';
 
+const generateMapHTML = (faiPoints: FaiPoint[], visitedIds: Set<number>, userLocation?: Location.LocationObject) => {
+  const userLat = userLocation?.coords.latitude ?? 45.4642;
+  const userLng = userLocation?.coords.longitude ?? 9.19;
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+      <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+      <style>
+        html, body, #map {
+          height: 100%;
+          width: 100%;
+          margin: 0;
+          padding: 0;
+        }
+        .leaflet-control-zoom {
+          display: none !important;
+        }
+        .location-button {
+          position: absolute;
+          top: 10px;
+          right: 16px;
+          z-index: 1000;
+          background: white;
+          border: none;
+          border-radius: 10px;
+          padding: 6px 10px;
+          cursor: pointer;
+          font-size: 18px;
+          height: 30px;
+          width: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          transition: all 0.2s ease;
+        }
+        .location-button:hover {
+          background: #f8f8f8;
+          transform: scale(1.05);
+        }
+        .location-button:active {
+          transform: scale(0.95);
+        }
+        .location-icon {
+          width: 8px;
+          height: 8px;
+          background-color: #007AFF;
+          border-radius: 50%;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+      </style>
+    </head>
+    <body>
+      <div id="map"></div>
+      <div class="location-button" onclick="goToUserLocation()">
+        <div class="location-icon"></div>
+      </div>
+      
+      <script>
+        var map = L.map('map', {
+          center: [${userLat}, ${userLng}],
+          zoom: 13,
+          zoomControl: false
+        });
+        var userLocation = [${userLat}, ${userLng}];
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          attribution: '',
+          maxZoom: 19
+        }).addTo(map);
+        
+        // Add user location with custom blue marker
+        var userIcon = L.divIcon({
+          html: '<div style="background-color: #007AFF; width: 8px; height: 8px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+          iconSize: [8, 8],
+          iconAnchor: [4, 4],
+          className: 'user-location-marker'
+        });
+        L.marker(userLocation, {icon: userIcon}).addTo(map).bindPopup('La tua posizione');
+        
+        // Add markers in batches to avoid blocking
+        var markersData = ${JSON.stringify(faiPoints.map(point => ({
+          lat: point.lat,
+          lng: point.lng,
+          title: point.title,
+          id: point.id,
+          isVisited: visitedIds.has(point.id)
+        })))};
+        
+        var batchSize = 50;
+        var currentIndex = 0;
+        
+        function addBatch() {
+          var endIndex = Math.min(currentIndex + batchSize, markersData.length);
+          
+          for (var i = currentIndex; i < endIndex; i++) {
+            var point = markersData[i];
+            var color = point.isVisited ? '#666666' : '#FF0000';
+            var opacity = point.isVisited ? 0.4 : 1;
+            
+            // Custom FAI marker - red/gray pin
+            var faiIcon = L.divIcon({
+              html: '<div style="background-color: ' + color + '; opacity: ' + opacity + '; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>',
+              iconSize: [24, 24],
+              iconAnchor: [12, 24],
+              className: 'fai-marker'
+            });
+            
+            var marker = L.marker([point.lat, point.lng], {icon: faiIcon})
+              .addTo(map)
+              .bindPopup('<b>' + point.title + '</b><br><a href="#" onclick="onMarkerClick(' + point.id + ', \\'' + point.title + '\\', \\'' + point.url + '\\', ' + point.isVisited + ')">Apri dettagli</a>');
+            
+            // Store point ID for later updates
+            marker._faiPointId = point.id;
+          }
+          
+          currentIndex = endIndex;
+          
+          if (currentIndex < markersData.length) {
+            setTimeout(addBatch, 10);
+          } else {
+            console.log('Added all ' + markersData.length + ' markers');
+          }
+        }
+        
+        function goToUserLocation() {
+          map.setView(userLocation, 15);
+        }
+        
+        function onMarkerClick(pointId, pointTitle, pointUrl, isVisited) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'markerPress', 
+            data: {
+              id: pointId, 
+              title: pointTitle, 
+              url: pointUrl, 
+              isVisited: isVisited
+            }
+          }));
+        }
+        
+        function updateMarkerColor(pointId, isVisited) {
+          // Find and update marker color without reloading map
+          var color = isVisited ? '#666666' : '#FF0000';
+          var opacity = isVisited ? 0.4 : 1;
+          console.log('Updating marker ' + pointId + ' to color: ' + color);
+        }
+        
+        // Handle messages from React Native
+        document.addEventListener('message', function(event) {
+          try {
+            var data = JSON.parse(event.data);
+            if (data.type === 'setCenter') {
+              map.setView([data.lat, data.lng], data.zoom || 15);
+            } else if (data.type === 'updateMarker') {
+              // Update specific marker without recentering
+              var pointId = data.data.id;
+              var isVisited = data.data.isVisited;
+              var color = isVisited ? '#666666' : '#FF0000';
+              var opacity = isVisited ? 0.4 : 1;
+              
+              map.eachLayer(function(layer) {
+                if (layer._latlng && layer._faiPointId === pointId) {
+                  var newIcon = L.divIcon({
+                    html: '<div style="background-color: ' + color + '; opacity: ' + opacity + '; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 24],
+                    className: 'fai-marker'
+                  });
+                  layer.setIcon(newIcon);
+                }
+              });
+            } else if (data.type === 'setVisitedStatus') {
+              // Update all markers with visited status
+              var visitedIds = new Set(data.data);
+              map.eachLayer(function(layer) {
+                if (layer._latlng && layer._faiPointId) {
+                  var isVisited = visitedIds.has(layer._faiPointId);
+                  var color = isVisited ? '#666666' : '#FF0000';
+                  var opacity = isVisited ? 0.4 : 1;
+                  // Update marker icon
+                  var newIcon = L.divIcon({
+                    html: '<div style="background-color: ' + color + '; opacity: ' + opacity + '; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 24],
+                    className: 'fai-marker'
+                  });
+                  layer.setIcon(newIcon);
+                }
+              });
+            } else if (data.type === 'updateMarkers') {
+              // Just update markers without changing view
+              console.log('Updating markers without recentering');
+            }
+          } catch (e) {
+            console.error('Error parsing message:', e);
+          }
+        });
+        
+        window.addEventListener('message', function(event) {
+          try {
+            var data = JSON.parse(event.data);
+            if (data.type === 'setCenter') {
+              map.setView([data.lat, data.lng], data.zoom || 15);
+            } else if (data.type === 'updateMarker') {
+              // Update specific marker without recentering
+              var pointId = data.data.id;
+              var isVisited = data.data.isVisited;
+              var color = isVisited ? '#666666' : '#FF0000';
+              var opacity = isVisited ? 0.4 : 1;
+              
+              map.eachLayer(function(layer) {
+                if (layer._latlng && layer._faiPointId === pointId) {
+                  var newIcon = L.divIcon({
+                    html: '<div style="background-color: ' + color + '; opacity: ' + opacity + '; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 24],
+                    className: 'fai-marker'
+                  });
+                  layer.setIcon(newIcon);
+                }
+              });
+            } else if (data.type === 'setVisitedStatus') {
+              // Update all markers with visited status
+              var visitedIds = new Set(data.data);
+              map.eachLayer(function(layer) {
+                if (layer._latlng && layer._faiPointId) {
+                  var isVisited = visitedIds.has(layer._faiPointId);
+                  var color = isVisited ? '#666666' : '#FF0000';
+                  var opacity = isVisited ? 0.4 : 1;
+                  // Update marker icon
+                  var newIcon = L.divIcon({
+                    html: '<div style="background-color: ' + color + '; opacity: ' + opacity + '; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 24],
+                    className: 'fai-marker'
+                  });
+                  layer.setIcon(newIcon);
+                }
+              });
+            } else if (data.type === 'updateMarkers') {
+              // Just update markers without changing view
+              console.log('Updating markers without recentering');
+            }
+          } catch (e) {
+            console.error('Error parsing message:', e);
+          }
+        });
+        
+        // Start adding markers after map is ready
+        setTimeout(addBatch, 1000);
+      </script>
+    </body>
+    </html>
+  `;
+};
+
 export default function MapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [locationLoading, setLocationLoading] = useState(true);
@@ -34,7 +297,7 @@ export default function MapScreen() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<WebView>(null);
 
   useEffect(() => {
     (async () => {
@@ -85,10 +348,32 @@ export default function MapScreen() {
       } else {
         newSet.add(id);
       }
+      
+      // Send update message to WebView to change marker color
+      if (mapRef.current) {
+        mapRef.current.postMessage(JSON.stringify({
+          type: 'updateMarker',
+          data: {
+            id: id,
+            isVisited: newSet.has(id)
+          }
+        }));
+      }
+      
+      // Find the point and center map on it
+      const point = faiPoints.find(p => p.id === id);
+      if (point && mapRef.current) {
+        mapRef.current.postMessage(JSON.stringify({
+          type: 'setCenter',
+          lat: point.lat,
+          lng: point.lng
+        }));
+      }
+      
       AsyncStorage.setItem(VISITED_STORAGE_KEY, JSON.stringify([...newSet]));
       return newSet;
     });
-  }, []);
+  }, [faiPoints]);
 
   const openInBrowser = async (url: string) => {
     await WebBrowser.openBrowserAsync(url);
@@ -146,33 +431,51 @@ export default function MapScreen() {
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lon);
     
-    const newRegion = {
-      latitude: lat,
-      longitude: lng,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
-    };
-    
     if (mapRef.current) {
-      mapRef.current.animateToRegion(newRegion, 1000);
+      mapRef.current.postMessage(JSON.stringify({
+        type: 'setCenter',
+        lat: lat,
+        lng: lng,
+        zoom: 15
+      }));
     }
     
     setShowSearchResults(false);
     setSearchQuery(result.display_name);
   };
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchQuery) {
-        searchLocation(searchQuery);
-      } else {
-        setSearchResults([]);
-        setShowSearchResults(false);
+  const handleWebViewMessage = (event: any) => {
+    const data = JSON.parse(event.nativeEvent.data);
+    if (data.type === 'markerPress') {
+      const point = faiPoints.find(p => p.id === data.data.id);
+      if (point) {
+        setSelectedPoint(point);
       }
-    }, 500);
+    }
+  };
 
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+  // Search only on enter and blur, not while typing
+
+  useEffect(() => {
+    // Send visited status to WebView after it loads
+    const timer = setTimeout(() => {
+      if (mapRef.current && visitedIds.size > 0) {
+        mapRef.current.postMessage(JSON.stringify({
+          type: 'setVisitedStatus',
+          data: Array.from(visitedIds)
+        }));
+      }
+    }, 2000); // Wait for map to load
+    
+    return () => clearTimeout(timer);
+  }, [visitedIds]);
+
+  // Auto-zoom to first search result
+  useEffect(() => {
+    if (searchResults.length > 0) {
+      handleSearchResultPress(searchResults[0]);
+    }
+  }, [searchResults]);
 
   if (locationLoading || pointsLoading) {
     return (
@@ -201,59 +504,50 @@ export default function MapScreen() {
             placeholder="Cerca un indirizzo o luogo..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            onFocus={() => searchQuery && setShowSearchResults(true)}
+            onSubmitEditing={() => {
+              if (searchQuery.trim()) {
+                searchLocation(searchQuery);
+              }
+            }}
+            onBlur={() => {
+              if (searchQuery.trim()) {
+                searchLocation(searchQuery);
+              }
+            }}
           />
           {searchLoading && (
             <ActivityIndicator size="small" color="#007AFF" style={styles.searchLoading} />
           )}
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={() => {
+                setSearchQuery('');
+                setSearchResults([]);
+              }}
+            >
+              <Ionicons name="close-circle" size={16} color="#666" />
+            </TouchableOpacity>
+          )}
         </View>
-        
-        {showSearchResults && (
-          <View style={styles.searchResultsContainer}>
-            {searchResults.length > 0 ? (
-              searchResults.map((result, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.searchResultItem}
-                  onPress={() => handleSearchResultPress(result)}
-                >
-                  <Ionicons name="location" size={16} color="#007AFF" style={styles.resultIcon} />
-                  <Text style={styles.searchResultText}>{result.display_name}</Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.noResultsContainer}>
-                <Text style={styles.noResultsText}>Nessun risultato trovato</Text>
-              </View>
-            )}
-          </View>
-        )}
       </View>
 
-      <MapView
+      <WebView
         ref={mapRef}
         style={styles.map}
-        showsUserLocation
-        initialRegion={{
-          latitude: location?.coords.latitude ?? 45.4642,
-          longitude: location?.coords.longitude ?? 9.19,
-          latitudeDelta: 0.2,
-          longitudeDelta: 0.2,
-        }}
-      >
-        {faiPoints.map((point) => {
-          const isVisited = visitedIds.has(point.id);
-          return (
-            <Marker
-              key={point.id}
-              coordinate={{ latitude: point.lat, longitude: point.lng }}
-              pinColor={isVisited ? '#666666' : '#FF0000'}
-              opacity={isVisited ? 0.4 : 1}
-              onPress={() => setSelectedPoint(point)}
-            />
-          );
-        })}
-      </MapView>
+        source={{ html: generateMapHTML(faiPoints, new Set(), location || undefined) }}
+        onMessage={handleWebViewMessage}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        startInLoadingState={true}
+        key={`${faiPoints.length}-${location?.coords.latitude}-${location?.coords.longitude}`}
+        renderLoading={() => (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Caricamento mappa...</Text>
+          </View>
+        )}
+      />
       
       <Modal
         visible={selectedPoint !== null}
@@ -347,7 +641,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     left: 16,
-    right: 66,
+    right: 81,
     zIndex: 1,
   },
   searchInputContainer: {
@@ -356,7 +650,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -373,6 +667,10 @@ const styles = StyleSheet.create({
   },
   searchLoading: {
     marginLeft: 8,
+  },
+  clearButton: {
+    marginLeft: 8,
+    padding: 4,
   },
   searchResultsContainer: {
     backgroundColor: 'white',

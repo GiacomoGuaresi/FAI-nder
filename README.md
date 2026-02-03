@@ -30,7 +30,62 @@ Il progetto **non sostituisce**, **non replica** e **non intende competere** con
 
 ---
 
-## 📦 Contenuto del repository
+## � Setup Sviluppo
+
+### Prerequisiti
+- Node.js (v18 o superiore)
+- Expo CLI
+- Account Google Cloud per Google Maps API
+
+### Configurazione Google Maps
+
+1. **Ottieni una API Key**:
+   - Vai su [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+   - Crea un nuovo progetto o seleziona uno esistente
+   - Abilita le API necessarie:
+     - Maps SDK for Android
+     - Maps SDK for iOS
+     - (Opzionale) Places API per la ricerca
+
+2. **Configura le variabili d'ambiente**:
+   ```bash
+   # Copia il template .env
+   cp .env.example .env
+   
+   # Modifica .env con la tua API key
+   EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=la_tua_api_key_qui
+   ```
+
+3. **Installa le dipendenze**:
+   ```bash
+   npm install
+   ```
+
+4. **Avvia l'app**:
+   ```bash
+   npm start
+   # oppure
+   expo start
+   ```
+
+### Build di Produzione
+
+Per la build di produzione, assicurati che:
+- La API key sia configurata correttamente nel file `.env`
+- Le API necessarie siano abilitate nel tuo progetto Google Cloud
+- La API key abbia le restrizioni corrette per Android/iOS
+
+```bash
+# Build Android
+expo build:android
+
+# Build iOS  
+expo build:ios
+```
+
+---
+
+## �📦 Contenuto del repository
 
 Il repository include:
 
