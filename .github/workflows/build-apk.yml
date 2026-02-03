@@ -68,10 +68,7 @@ jobs:
 
       - name: Download APK
         run: |
-          eas build:download \
-            --id "$BUILD_ID" \
-            --platform android \
-            --output app.apk
+          eas build:download "$BUILD_ID" --platform android --output app.apk
 
           if [ ! -f app.apk ]; then
             echo "❌ APK not downloaded"
