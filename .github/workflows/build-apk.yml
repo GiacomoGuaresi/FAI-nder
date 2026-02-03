@@ -48,8 +48,28 @@ jobs:
 
       - name: Download APK
         run: |
-          BUILD_ID=$(eas build:list --platform android --limit 1 --json | jq -r '.[0].id')
-          eas build:download --id $BUILD_ID --platform android --output app.apk
+          # Wait a moment for build to be available
+          sleep 30
+          
+          # Try to get the latest build ID with error handling
+          for i in {1..5}; do
+            BUILD_OUTPUT=$(eas build:list --platform android --limit 1 --json)
+            if echo "$BUILD_OUTPUT" | jq -e '. | length > 0' > /dev/null; then
+              BUILD_ID=$(echo "$BUILD_OUTPUT" | jq -r '.[0].id')
+              echo "Found build ID: $BUILD_ID"
+              eas build:download --id $BUILD_ID --platform android --output app.apk
+              break
+            else
+              echo "No builds found yet, waiting... (attempt $i/5)"
+              sleep 30
+            fi
+          done
+          
+          # Check if APK was downloaded
+          if [ ! -f "app.apk" ]; then
+            echo "Error: Could not download APK after multiple attempts"
+            exit 1
+          fi
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
