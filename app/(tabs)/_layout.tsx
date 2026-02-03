@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingLeft: 0,
-    paddingTop: 40,
+    paddingTop: 14,
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
@@ -45,44 +45,53 @@ const styles = StyleSheet.create({
     tintColor: '#e74f30',
     marginRight: -20,
   },
+  themeBar: {
+    height: 28,
+    backgroundColor: '#e74f30',
+    width: '100%',
+  },
 });
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: 'white',
-        tabBarInactiveTintColor: '#e74f30',
-        tabBarStyle: {
-          backgroundColor: 'white',
-        },
-        tabBarActiveBackgroundColor: '#e74f30',
-        headerShown: true,
-        header: () => <CustomHeader />,
-        headerStyle: {
-          backgroundColor: 'white',
-          borderBottomWidth: 1,
-          borderBottomColor: '#e0e0e0',
-        },
-        headerTintColor: '#e74f30',
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Mappa beni',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="map.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Carta FAI',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="creditcard.fill" color={color} />,
-        }}
-      />
-    </Tabs>
+    <View style={{ flex: 1 }}>
+      {/* Barra arancione */}
+      <View style={styles.themeBar} />
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: 'white',
+          tabBarInactiveTintColor: '#e74f30',
+          tabBarStyle: {
+            backgroundColor: 'white',
+          },
+          tabBarActiveBackgroundColor: '#e74f30',
+          headerShown: true,
+          header: () => <CustomHeader />,
+          headerStyle: {
+            backgroundColor: 'white',
+            borderBottomWidth: 1,
+            borderBottomColor: '#e0e0e0',
+          },
+          headerTintColor: '#e74f30',
+          tabBarButton: HapticTab,
+        }}>
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Mappa beni',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="map.fill" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="explore"
+          options={{
+            title: 'Carta FAI',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="creditcard.fill" color={color} />,
+          }}
+        />
+      </Tabs>
+    </View>
   );
 }
