@@ -638,7 +638,7 @@ export default function MapScreen() {
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=it`,
         {
           headers: {
-            'User-Agent': 'FAIder/1.0 (giacomoguaresi.dev@gmail.com)'
+            'User-Agent': 'FAInder/1.0 (giacomoguaresi.dev@gmail.com)'
           }
         }
       );

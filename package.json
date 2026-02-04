@@ -1,7 +1,7 @@
 {
   "name": "fainder",
   "version": "1.0.0",
-  "description": "FAIder è un'app mobile open source per esplorare i beni del Fondo Ambiente Italiano su mappa",
+  "description": "FAInder è un'app mobile open source per esplorare i beni del Fondo Ambiente Italiano su mappa",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
