@@ -1,15 +1,15 @@
 <div align="center">
-  <img src="assets/images/LOGO.png" alt="FAI-nder Logo" width="200"/>
-  <h1>FAI-nder</h1>
+  <img src="assets/images/LOGO.png" alt="FAIder Logo" width="200"/>
+  <h1>FAIder</h1>
 </div>
 
-FAI-nder è un progetto **open source** che raccoglie e rende consultabili, in forma geografica, alcuni luoghi e attività presenti sulla piattaforma pubblica del Fondo Ambiente Italiano (FAI).
+FAIder è un progetto **open source** che raccoglie e rende consultabili, in forma geografica, alcuni luoghi e attività presenti sulla piattaforma pubblica del Fondo Ambiente Italiano (FAI).
 
 Il progetto nasce con l'obiettivo di **facilitare la ricerca e la scoperta** di luoghi di interesse culturale, storico e territoriale, attraverso una rappresentazione su mappa semplice e accessibile.
 
 ## 📱 App Mobile
 
-FAI-nder include un'applicazione mobile nativa per iOS e Android che permette di:
+FAIder include un'applicazione mobile nativa per iOS e Android che permette di:
 
 - **Esplorare la mappa** dei beni FAI con la propria posizione
 - **Tracciare i luoghi visitati** con un sistema di check-in
@@ -22,7 +22,7 @@ L'app è sviluppata con React Native/Expo e offre un'esperienza utente ottimizza
 
 ## 🎯 Obiettivo del progetto
 
-FAI-nder ha uno scopo **puramente informativo e sperimentale**:
+FAIder ha uno scopo **puramente informativo e sperimentale**:
 
 - aggregare dati pubblicamente accessibili
 - trasformarli in un formato leggero (JSON) adatto a mappe e applicazioni
@@ -119,7 +119,7 @@ Questo progetto **NON è affiliato, sponsorizzato o approvato** dal Fondo Ambien
 
 - Il nome “FAI” è di proprietà del Fondo Ambiente Italiano.
 - Tutti i contenuti testuali, multimediali e informativi restano di proprietà dei rispettivi titolari.
-- FAI-nder si limita a **rimandare alle pagine ufficiali** del sito FAI, senza duplicarne i contenuti.
+- FAIder si limita a **rimandare alle pagine ufficiali** del sito FAI, senza duplicarne i contenuti.
 
 Se il FAI o altri titolari dei diritti ritengono che questo progetto violi in qualsiasi modo le loro policy, sono invitati a contattare l’autore per una rapida rimozione o modifica.
 

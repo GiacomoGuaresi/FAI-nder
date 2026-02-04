@@ -2,8 +2,8 @@ const pkg = require('./package.json');
 
 module.exports = {
   expo: {
-    name: "FAI-nder",
-    slug: "FAI-nder",
+    name: "FAIder",
+    slug: "FAIder",
     version: pkg.version,
 
     orientation: "portrait",

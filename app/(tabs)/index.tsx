@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import * as WebBrowser from 'expo-web-browser';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
@@ -24,7 +24,7 @@ interface SearchResult {
   lon: string;
 }
 
-const FAI_DATA_URL = 'https://raw.githubusercontent.com/GiacomoGuaresi/FAI-nder/refs/heads/main/data/beni-fai.json';
+const FAI_DATA_URL = 'https://raw.githubusercontent.com/GiacomoGuaresi/FAIder/refs/heads/main/data/beni-fai.json';
 const VISITED_STORAGE_KEY = 'fai_visited_places';
 
 const generateMapHTML = (faiPoints: FaiPoint[], visitedIds: Set<number>, userLocation?: Location.LocationObject) => {
@@ -410,7 +410,7 @@ export default function MapScreen() {
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=it`,
         {
           headers: {
-            'User-Agent': 'FAI-nder/1.0 (giacomoguaresi.dev@gmail.com)'
+            'User-Agent': 'FAIder/1.0 (giacomoguaresi.dev@gmail.com)'
           }
         }
       );
