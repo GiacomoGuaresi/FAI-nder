@@ -26,6 +26,8 @@ interface SearchResult {
 
 const FAI_DATA_URL = 'https://raw.githubusercontent.com/GiacomoGuaresi/FAI-nder/main/data/beni-fai.json';
 const VISITED_STORAGE_KEY = 'fai_visited_places';
+const FAVORITES_STORAGE_KEY = 'fai_favorites_places';
+const NOT_INTERESTED_STORAGE_KEY = 'fai_not_interested_places';
 
 // Funzione per decodificare entità HTML
 const decodeHtmlEntities = (text: string): string => {
@@ -74,7 +76,7 @@ const truncateText = (text: string, maxLength: number = 500): string => {
   return text.substring(0, maxLength).trim() + '...';
 };
 
-const generateMapHTML = (faiPoints: FaiPoint[], visitedIds: Set<number>, userLocation?: Location.LocationObject) => {
+const generateMapHTML = (faiPoints: FaiPoint[], visitedIds: Set<number>, favoritesIds: Set<number>, notInterestedIds: Set<number>, userLocation?: Location.LocationObject) => {
   const userLat = userLocation?.coords.latitude ?? 45.4642;
   const userLng = userLocation?.coords.longitude ?? 9.19;
   
@@ -166,7 +168,9 @@ const generateMapHTML = (faiPoints: FaiPoint[], visitedIds: Set<number>, userLoc
           lng: point.lng,
           title: point.title,
           id: point.id,
-          isVisited: visitedIds.has(point.id)
+          isVisited: visitedIds.has(point.id),
+          isFavorite: favoritesIds.has(point.id),
+          isNotInterested: notInterestedIds.has(point.id)
         })))};
         
         var batchSize = 50;
@@ -177,14 +181,31 @@ const generateMapHTML = (faiPoints: FaiPoint[], visitedIds: Set<number>, userLoc
           
           for (var i = currentIndex; i < endIndex; i++) {
             var point = markersData[i];
-            var color = point.isVisited ? '#666666' : '#e74f30';
-            var opacity = point.isVisited ? 0.4 : 1;
+            var color, opacity, size;
             
-            // Custom FAI marker - red/gray pin
+            if (point.isFavorite) {
+              color = '#FFD700'; // Giallo per preferiti
+              opacity = 1;
+              size = 24;
+            } else if (point.isNotInterested) {
+              color = '#666666'; // Grigio per non interessati
+              opacity = 0.4;
+              size = 16; // Piccolo per non interessati
+            } else if (point.isVisited) {
+              color = '#4CAF50'; // Verde per visitati
+              opacity = 1;
+              size = 16; // Piccolo per visitati
+            } else {
+              color = '#e74f30'; // Rosso per normali
+              opacity = 1;
+              size = 24; // Grande per luoghi da visitare
+            }
+            
+            // Custom FAI marker
             var faiIcon = L.divIcon({
-              html: '<div style="background-color: ' + color + '; opacity: ' + opacity + '; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>',
-              iconSize: [24, 24],
-              iconAnchor: [12, 24],
+              html: '<div style="background-color: ' + color + '; opacity: ' + opacity + '; width: ' + size + 'px; height: ' + size + 'px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>',
+              iconSize: [size, size],
+              iconAnchor: [size/2, size],
               className: 'fai-marker'
             });
             
@@ -221,10 +242,28 @@ const generateMapHTML = (faiPoints: FaiPoint[], visitedIds: Set<number>, userLoc
           }));
         }
         
-        function updateMarkerColor(pointId, isVisited) {
+        function updateMarkerColor(pointId, isVisited, isFavorite, isNotInterested) {
           // Find and update marker color without reloading map
-          var color = isVisited ? '#666666' : '#e74f30';
-          var opacity = isVisited ? 0.4 : 1;
+          var color, opacity, size;
+          
+          if (isFavorite) {
+            color = '#FFD700'; // Giallo per preferiti
+            opacity = 1;
+            size = 24;
+          } else if (isNotInterested) {
+            color = '#666666'; // Grigio per non interessati
+            opacity = 0.4;
+            size = 24;
+          } else if (isVisited) {
+            color = '#4CAF50'; // Verde per visitati
+            opacity = 1;
+            size = 16; // Più piccolo per visitati
+          } else {
+            color = '#e74f30'; // Rosso per normali
+            opacity = 1;
+            size = 24;
+          }
+          
           console.log('Updating marker ' + pointId + ' to color: ' + color);
         }
         
@@ -238,15 +277,35 @@ const generateMapHTML = (faiPoints: FaiPoint[], visitedIds: Set<number>, userLoc
               // Update specific marker without recentering
               var pointId = data.data.id;
               var isVisited = data.data.isVisited;
-              var color = isVisited ? '#666666' : '#e74f30';
-              var opacity = isVisited ? 0.4 : 1;
+              var isFavorite = data.data.isFavorite;
+              var isNotInterested = data.data.isNotInterested;
+              
+              var color, opacity, size;
+              
+              if (isFavorite) {
+                color = '#FFD700'; // Giallo per preferiti
+                opacity = 1;
+                size = 24;
+              } else if (isNotInterested) {
+                color = '#666666'; // Grigio per non interessati
+                opacity = 0.4;
+                size = 24;
+              } else if (isVisited) {
+                color = '#4CAF50'; // Verde per visitati
+                opacity = 1;
+                size = 16; // Più piccolo per visitati
+              } else {
+                color = '#e74f30'; // Rosso per normali
+                opacity = 1;
+                size = 24;
+              }
               
               map.eachLayer(function(layer) {
                 if (layer._latlng && layer._faiPointId === pointId) {
                   var newIcon = L.divIcon({
-                    html: '<div style="background-color: ' + color + '; opacity: ' + opacity + '; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 24],
+                    html: '<div style="background-color: ' + color + '; opacity: ' + opacity + '; width: ' + size + 'px; height: ' + size + 'px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>',
+                    iconSize: [size, size],
+                    iconAnchor: [size/2, size],
                     className: 'fai-marker'
                   });
                   layer.setIcon(newIcon);
@@ -262,9 +321,9 @@ const generateMapHTML = (faiPoints: FaiPoint[], visitedIds: Set<number>, userLoc
                   var opacity = isVisited ? 0.4 : 1;
                   // Update marker icon
                   var newIcon = L.divIcon({
-                    html: '<div style="background-color: ' + color + '; opacity: ' + opacity + '; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 24],
+                    html: '<div style="background-color: ' + color + '; opacity: ' + opacity + '; width: ' + size + 'px; height: ' + size + 'px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>',
+                    iconSize: [size, size],
+                    iconAnchor: [size/2, size],
                     className: 'fai-marker'
                   });
                   layer.setIcon(newIcon);
@@ -288,15 +347,35 @@ const generateMapHTML = (faiPoints: FaiPoint[], visitedIds: Set<number>, userLoc
               // Update specific marker without recentering
               var pointId = data.data.id;
               var isVisited = data.data.isVisited;
-              var color = isVisited ? '#666666' : '#e74f30';
-              var opacity = isVisited ? 0.4 : 1;
+              var isFavorite = data.data.isFavorite;
+              var isNotInterested = data.data.isNotInterested;
+              
+              var color, opacity, size;
+              
+              if (isFavorite) {
+                color = '#FFD700'; // Giallo per preferiti
+                opacity = 1;
+                size = 24;
+              } else if (isNotInterested) {
+                color = '#666666'; // Grigio per non interessati
+                opacity = 0.4;
+                size = 24;
+              } else if (isVisited) {
+                color = '#4CAF50'; // Verde per visitati
+                opacity = 1;
+                size = 16; // Più piccolo per visitati
+              } else {
+                color = '#e74f30'; // Rosso per normali
+                opacity = 1;
+                size = 24;
+              }
               
               map.eachLayer(function(layer) {
                 if (layer._latlng && layer._faiPointId === pointId) {
                   var newIcon = L.divIcon({
-                    html: '<div style="background-color: ' + color + '; opacity: ' + opacity + '; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 24],
+                    html: '<div style="background-color: ' + color + '; opacity: ' + opacity + '; width: ' + size + 'px; height: ' + size + 'px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>',
+                    iconSize: [size, size],
+                    iconAnchor: [size/2, size],
                     className: 'fai-marker'
                   });
                   layer.setIcon(newIcon);
@@ -312,9 +391,9 @@ const generateMapHTML = (faiPoints: FaiPoint[], visitedIds: Set<number>, userLoc
                   var opacity = isVisited ? 0.4 : 1;
                   // Update marker icon
                   var newIcon = L.divIcon({
-                    html: '<div style="background-color: ' + color + '; opacity: ' + opacity + '; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 24],
+                    html: '<div style="background-color: ' + color + '; opacity: ' + opacity + '; width: ' + size + 'px; height: ' + size + 'px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>',
+                    iconSize: [size, size],
+                    iconAnchor: [size/2, size],
                     className: 'fai-marker'
                   });
                   layer.setIcon(newIcon);
@@ -343,6 +422,8 @@ export default function MapScreen() {
   const [pointsLoading, setPointsLoading] = useState(true);
   const [faiPoints, setFaiPoints] = useState<FaiPoint[]>([]);
   const [visitedIds, setVisitedIds] = useState<Set<number>>(new Set());
+  const [favoritesIds, setFavoritesIds] = useState<Set<number>>(new Set());
+  const [notInterestedIds, setNotInterestedIds] = useState<Set<number>>(new Set());
   const [selectedPoint, setSelectedPoint] = useState<FaiPoint | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -407,6 +488,32 @@ export default function MapScreen() {
     })();
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(FAVORITES_STORAGE_KEY);
+        if (stored) {
+          setFavoritesIds(new Set(JSON.parse(stored)));
+        }
+      } catch (error) {
+        console.error('Error loading favorites places:', error);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(NOT_INTERESTED_STORAGE_KEY);
+        if (stored) {
+          setNotInterestedIds(new Set(JSON.parse(stored)));
+        }
+      } catch (error) {
+        console.error('Error loading not interested places:', error);
+      }
+    })();
+  }, []);
+
   const toggleVisited = useCallback(async (id: number) => {
     setVisitedIds((prev) => {
       const newSet = new Set(prev);
@@ -423,7 +530,9 @@ export default function MapScreen() {
             type: 'updateMarker',
             data: {
               id: id,
-              isVisited: newSet.has(id)
+              isVisited: newSet.has(id),
+              isFavorite: favoritesIds.has(id),
+              isNotInterested: notInterestedIds.has(id)
             }
           }));
         } catch (error) {
@@ -445,10 +554,72 @@ export default function MapScreen() {
         }
       }
       
-      AsyncStorage.setItem(VISITED_STORAGE_KEY, JSON.stringify([...newSet]));
+      AsyncStorage.setItem(VISITED_STORAGE_KEY, JSON.stringify(Array.from(newSet)));
       return newSet;
     });
-  }, [faiPoints]);
+  }, [faiPoints, favoritesIds, notInterestedIds]);
+
+  const toggleFavorite = useCallback(async (id: number) => {
+    setFavoritesIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      
+      // Send update message to WebView to change marker color
+      if (mapRef.current) {
+        try {
+          mapRef.current.postMessage(JSON.stringify({
+            type: 'updateMarker',
+            data: {
+              id: id,
+              isVisited: visitedIds.has(id),
+              isFavorite: newSet.has(id),
+              isNotInterested: notInterestedIds.has(id)
+            }
+          }));
+        } catch (error) {
+          console.error('Error sending message to WebView:', error);
+        }
+      }
+      
+      AsyncStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(Array.from(newSet)));
+      return newSet;
+    });
+  }, [faiPoints, visitedIds, notInterestedIds]);
+
+  const toggleNotInterested = useCallback(async (id: number) => {
+    setNotInterestedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      
+      // Send update message to WebView to change marker color
+      if (mapRef.current) {
+        try {
+          mapRef.current.postMessage(JSON.stringify({
+            type: 'updateMarker',
+            data: {
+              id: id,
+              isVisited: visitedIds.has(id),
+              isFavorite: favoritesIds.has(id),
+              isNotInterested: newSet.has(id)
+            }
+          }));
+        } catch (error) {
+          console.error('Error sending message to WebView:', error);
+        }
+      }
+      
+      AsyncStorage.setItem(NOT_INTERESTED_STORAGE_KEY, JSON.stringify(Array.from(newSet)));
+      return newSet;
+    });
+  }, [faiPoints, visitedIds, favoritesIds]);
 
   const openInBrowser = async (url: string) => {
     await WebBrowser.openBrowserAsync(url);
@@ -615,7 +786,7 @@ export default function MapScreen() {
         <WebView
           ref={mapRef}
           style={styles.map}
-          source={{ html: generateMapHTML(faiPoints, new Set(), location || undefined) }}
+          source={{ html: generateMapHTML(faiPoints, visitedIds, favoritesIds, notInterestedIds, location || undefined) }}
           onMessage={handleWebViewMessage}
           javaScriptEnabled={true}
           domStorageEnabled={true}
@@ -652,6 +823,36 @@ export default function MapScreen() {
                 <Ionicons name="close" size={16} color="#666" />
               </TouchableOpacity>
               
+              <TouchableOpacity
+                style={styles.favoriteIconButton}
+                onPress={() => {
+                  if (selectedPoint) {
+                    toggleFavorite(selectedPoint.id);
+                  }
+                }}
+              >
+                <Ionicons 
+                  name={selectedPoint && favoritesIds.has(selectedPoint.id) ? "star" : "star-outline"} 
+                  size={20} 
+                  color="#FFD700" 
+                />
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.notInterestedIconButton}
+                onPress={() => {
+                  if (selectedPoint) {
+                    toggleNotInterested(selectedPoint.id);
+                  }
+                }}
+              >
+                <Ionicons 
+                  name={selectedPoint && notInterestedIds.has(selectedPoint.id) ? "eye-off" : "eye-off-outline"} 
+                  size={20} 
+                  color="#666" 
+                />
+              </TouchableOpacity>
+              
               <Text style={styles.modalTitle}>{selectedPoint?.title}</Text>
               {selectedPoint?.description ? (
                 <Text style={styles.modalDescription}>
@@ -664,6 +865,18 @@ export default function MapScreen() {
                 <View style={styles.visitedBadge}>
                   <Ionicons name="checkmark" size={12} color="#4CAF50" />
                   <Text style={styles.visitedBadgeText}> Già visitato</Text>
+                </View>
+              )}
+              {selectedPoint && favoritesIds.has(selectedPoint.id) && (
+                <View style={styles.favoriteBadge}>
+                  <Ionicons name="star" size={12} color="#FFD700" />
+                  <Text style={styles.favoriteBadgeText}> Preferito</Text>
+                </View>
+              )}
+              {selectedPoint && notInterestedIds.has(selectedPoint.id) && (
+                <View style={styles.notInterestedBadge}>
+                  <Ionicons name="close" size={12} color="#666" />
+                  <Text style={styles.notInterestedBadgeText}> Non interessato</Text>
                 </View>
               )}
               
@@ -825,6 +1038,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  favoriteIconButton: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notInterestedIconButton: {
+    position: 'absolute',
+    top: 8,
+    left: 48,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(102, 102, 102, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   closeButtonText: {
     fontSize: 14,
     fontWeight: 'bold',
@@ -835,6 +1070,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 8,
     textAlign: 'center',
+    marginTop: 20,
     color: '#333',
   },
   modalDescription: {
@@ -854,10 +1090,30 @@ const styles = StyleSheet.create({
   visitedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   visitedBadgeText: {
     color: '#4CAF50',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  favoriteBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  favoriteBadgeText: {
+    color: '#FFD700',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  notInterestedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  notInterestedBadgeText: {
+    color: '#666',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -880,6 +1136,12 @@ const styles = StyleSheet.create({
   },
   visitButton: {
     backgroundColor: '#4CAF50',
+  },
+  favoriteButton: {
+    backgroundColor: '#FFD700',
+  },
+  notInterestedButton: {
+    backgroundColor: '#666666',
   },
   detailsButton: {
     backgroundColor: '#e74f30',
