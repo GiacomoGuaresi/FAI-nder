@@ -100,7 +100,7 @@ const generateMapHTML = (faiPoints: FaiPoint[], visitedIds: Set<number>, favorit
         }
         .location-button {
           position: absolute;
-          top: 10px;
+          bottom: 20px;
           right: 16px;
           z-index: 1000;
           background: white;
@@ -942,7 +942,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     left: 16,
-    right: 81,
+    right: 16,
     zIndex: 1,
   },
   searchInputContainer: {
