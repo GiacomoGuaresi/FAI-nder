@@ -176,9 +176,24 @@ export default function TabLayout() {
     }).start();
   };
 
-  const navigateToProperties = () => {
+  const navigateToLuoghiPreferiti = () => {
     toggleSidebar();
-    router.push('/(tabs)/properties');
+    router.push('/(tabs)/luoghi-preferiti');
+  };
+
+  const navigateToLuoghiVisitati = () => {
+    toggleSidebar();
+    router.push('/(tabs)/luoghi-visitati');
+  };
+
+  const navigateToLuoghiNonInteressati = () => {
+    toggleSidebar();
+    router.push('/(tabs)/luoghi-non-interessati');
+  };
+
+  const navigateToTuttiLuoghi = () => {
+    toggleSidebar();
+    router.push('/(tabs)/tutti-luoghi');
   };
 
   const navigateToAbout = () => {
@@ -221,10 +236,31 @@ export default function TabLayout() {
         <View style={styles.sidebarContent}>
           <TouchableOpacity 
             style={styles.menuItem}
-            onPress={navigateToProperties}
+            onPress={navigateToLuoghiPreferiti}
           >
-            <Ionicons name="list" size={20} color="#e74f30" style={styles.menuItemIcon} />
-            <Text style={styles.menuItemText}>Elenco Luoghi</Text>
+            <Ionicons name="star" size={20} color="#e74f30" style={styles.menuItemIcon} />
+            <Text style={styles.menuItemText}>Luoghi Preferiti</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={navigateToLuoghiVisitati}
+          >
+            <Ionicons name="checkmark-circle" size={20} color="#e74f30" style={styles.menuItemIcon} />
+            <Text style={styles.menuItemText}>Luoghi Visitati</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={navigateToLuoghiNonInteressati}
+          >
+            <Ionicons name="eye-off" size={20} color="#e74f30" style={styles.menuItemIcon} />
+            <Text style={styles.menuItemText}>Luoghi Non Interessati</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={navigateToTuttiLuoghi}
+          >
+            <Ionicons name="map" size={20} color="#e74f30" style={styles.menuItemIcon} />
+            <Text style={styles.menuItemText}>Tutti gli Altri Luoghi</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.menuItem}
@@ -292,19 +328,9 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="about"
+          name="luoghi-preferiti"
           options={{
-            title: 'About',
-            href: null, // Hide from tab bar, only accessible via sidebar
-            tabBarStyle: { display: 'none' }, // Hide tab bar on this screen
-            headerShown: false, // Use custom header in the component
-          }}
-        />
-        <Tabs.Screen
-          name="properties"
-          options={{
-            title: 'Elenco Luoghi',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="list.bullet" color={color} />,
+            title: 'Luoghi Preferiti',
             href: null, // Hide from tab bar, only accessible via sidebar
             tabBarStyle: { display: 'none' }, // Hide tab bar on this screen
             headerShown: true,
@@ -313,10 +339,73 @@ export default function TabLayout() {
                 <TouchableOpacity onPress={() => router.replace('/')} style={styles.backButton}>
                   <Ionicons name="arrow-back" size={24} color="#333333" />
                 </TouchableOpacity>
-                <Text style={styles.propertiesHeaderTitle}>Elenco Luoghi</Text>
+                <Text style={styles.propertiesHeaderTitle}>Luoghi Preferiti</Text>
                 <View style={styles.placeholder} />
               </View>
             ),
+          }}
+        />
+        <Tabs.Screen
+          name="luoghi-visitati"
+          options={{
+            title: 'Luoghi Visitati',
+            href: null, // Hide from tab bar, only accessible via sidebar
+            tabBarStyle: { display: 'none' }, // Hide tab bar on this screen
+            headerShown: true,
+            header: () => (
+              <View style={styles.propertiesHeader}>
+                <TouchableOpacity onPress={() => router.replace('/')} style={styles.backButton}>
+                  <Ionicons name="arrow-back" size={24} color="#333333" />
+                </TouchableOpacity>
+                <Text style={styles.propertiesHeaderTitle}>Luoghi Visitati</Text>
+                <View style={styles.placeholder} />
+              </View>
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="luoghi-non-interessati"
+          options={{
+            title: 'Luoghi Non Interessati',
+            href: null, // Hide from tab bar, only accessible via sidebar
+            tabBarStyle: { display: 'none' }, // Hide tab bar on this screen
+            headerShown: true,
+            header: () => (
+              <View style={styles.propertiesHeader}>
+                <TouchableOpacity onPress={() => router.replace('/')} style={styles.backButton}>
+                  <Ionicons name="arrow-back" size={24} color="#333333" />
+                </TouchableOpacity>
+                <Text style={styles.propertiesHeaderTitle}>Luoghi Non Interessati</Text>
+                <View style={styles.placeholder} />
+              </View>
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="tutti-luoghi"
+          options={{
+            title: 'Tutti gli Altri Luoghi',
+            href: null, // Hide from tab bar, only accessible via sidebar
+            tabBarStyle: { display: 'none' }, // Hide tab bar on this screen
+            headerShown: true,
+            header: () => (
+              <View style={styles.propertiesHeader}>
+                <TouchableOpacity onPress={() => router.replace('/')} style={styles.backButton}>
+                  <Ionicons name="arrow-back" size={24} color="#333333" />
+                </TouchableOpacity>
+                <Text style={styles.propertiesHeaderTitle}>Tutti gli Altri Luoghi</Text>
+                <View style={styles.placeholder} />
+              </View>
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="about"
+          options={{
+            title: 'About',
+            href: null, // Hide from tab bar, only accessible via sidebar
+            tabBarStyle: { display: 'none' }, // Hide tab bar on this screen
+            headerShown: false, // Use custom header in the component
           }}
         />
       </Tabs>

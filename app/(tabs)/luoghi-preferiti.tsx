@@ -1,8 +1,10 @@
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface FaiPoint {
   id: number;
@@ -15,7 +17,6 @@ interface FaiPoint {
 
 const FAI_DATA_URL = 'https://raw.githubusercontent.com/GiacomoGuaresi/FAI-nder/main/data/beni-fai.json';
 const FAVORITES_STORAGE_KEY = 'fai_favorites_places';
-const NOT_INTERESTED_STORAGE_KEY = 'fai_not_interested_places';
 
 // Funzione per decodificare entità HTML
 const decodeHtmlEntities = (text: string): string => {
@@ -64,11 +65,10 @@ const truncateText = (text: string, maxLength: number = 200): string => {
   return text.substring(0, maxLength).trim() + '...';
 };
 
-export default function PropertiesScreen() {
+export default function LuoghiPreferitiScreen() {
   const [loading, setLoading] = useState(true);
   const [faiPoints, setFaiPoints] = useState<FaiPoint[]>([]);
   const [favoritesIds, setFavoritesIds] = useState<Set<number>>(new Set());
-  const [notInterestedIds, setNotInterestedIds] = useState<Set<number>>(new Set());
   const router = useRouter();
 
   useEffect(() => {
@@ -99,16 +99,10 @@ export default function PropertiesScreen() {
     useCallback(() => {
       (async () => {
         try {
-          const [favoritesStored, notInterestedStored] = await Promise.all([
-            AsyncStorage.getItem(FAVORITES_STORAGE_KEY),
-            AsyncStorage.getItem(NOT_INTERESTED_STORAGE_KEY)
-          ]);
+          const favoritesStored = await AsyncStorage.getItem(FAVORITES_STORAGE_KEY);
           
           if (favoritesStored) {
             setFavoritesIds(new Set(JSON.parse(favoritesStored)));
-          }
-          if (notInterestedStored) {
-            setNotInterestedIds(new Set(JSON.parse(notInterestedStored)));
           }
         } catch (error) {
           console.error('Error loading stored data:', error);
@@ -117,41 +111,31 @@ export default function PropertiesScreen() {
     }, [])
   );
 
-  // Filter and organize properties with alphabetical sorting
+  // Filter and sort properties alphabetically
   const favoriteProperties = faiPoints
     .filter(point => favoritesIds.has(point.id))
     .sort((a, b) => a.title.localeCompare(b.title, 'it', { sensitivity: 'base' }));
-  
-  const notInterestedProperties = faiPoints
-    .filter(point => notInterestedIds.has(point.id))
-    .sort((a, b) => a.title.localeCompare(b.title, 'it', { sensitivity: 'base' }));
-  
-  const otherProperties = faiPoints
-    .filter(point => !favoritesIds.has(point.id) && !notInterestedIds.has(point.id))
-    .sort((a, b) => a.title.localeCompare(b.title, 'it', { sensitivity: 'base' }));
+
+  const openFaiWebsite = async (url: string) => {
+    try {
+      await WebBrowser.openBrowserAsync(url);
+    } catch (error) {
+      console.error('Error opening website:', error);
+      Alert.alert('Errore', 'Impossibile aprire il sito web');
+    }
+  };
 
   const renderPropertyItem = ({ item }: { item: FaiPoint }) => (
-    <View style={styles.propertyItem}>
-      <Text style={styles.propertyTitle}>{item.title}</Text>
-    </View>
-  );
-
-  const renderSection = (title: string, data: FaiPoint[], emptyMessage: string) => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {data.length > 0 ? (
-        <FlatList
-          data={data}
-          renderItem={renderPropertyItem}
-          keyExtractor={(item) => item.id.toString()}
-          scrollEnabled={false}
-        />
-      ) : (
-        <View style={styles.emptySection}>
-          <Text style={styles.emptyText}>{emptyMessage}</Text>
-        </View>
+    <TouchableOpacity style={styles.propertyItem} onPress={() => openFaiWebsite(item.url)}>
+      <View style={styles.propertyHeader}>
+        <Text style={styles.propertyTitle}>{decodeHtmlEntities(item.title)}</Text>
+        <Ionicons name="open-outline" size={20} color="#e74f30" />
+      </View>
+      {item.description && (
+        <Text style={styles.propertyDescription}>{truncateText(decodeHtmlEntities(item.description))}</Text>
       )}
-    </View>
+      <Text style={styles.linkText}>Tocca per aprire il sito FAI</Text>
+    </TouchableOpacity>
   );
 
   if (loading) {
@@ -164,19 +148,24 @@ export default function PropertiesScreen() {
   }
 
   return (
-      <View style={styles.container}>
+    <View style={styles.container}>
+      {favoriteProperties.length > 0 ? (
         <FlatList
-          data={[
-            { key: 'favorites', title: 'Beni Preferiti', data: favoriteProperties, emptyMessage: 'Nessun bene preferito' },
-            { key: 'notInterested', title: 'Beni Non Interessanti', data: notInterestedProperties, emptyMessage: 'Nessun bene non interessante' },
-            { key: 'other', title: 'Altri Beni', data: otherProperties, emptyMessage: 'Nessun altro bene disponibile' }
-          ]}
-          renderItem={({ item }) => renderSection(item.title, item.data, item.emptyMessage)}
-          keyExtractor={(item) => item.key}
+          data={favoriteProperties}
+          renderItem={renderPropertyItem}
+          keyExtractor={(item) => item.id.toString()}
           style={styles.list}
+          contentContainerStyle={styles.listContainer}
         />
-      </View>
-    );
+      ) : (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="star-outline" size={64} color="#ccc" />
+          <Text style={styles.emptyText}>Nessun luogo preferito</Text>
+          <Text style={styles.emptySubtext}>Aggiungi luoghi preferiti dalla mappa</Text>
+        </View>
+      )}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -200,47 +189,62 @@ const styles = StyleSheet.create({
   list: {
     flex: 1,
   },
-  section: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+  listContainer: {
+    padding: 16,
   },
   propertyItem: {
     backgroundColor: 'white',
-    marginHorizontal: 16,
-    marginVertical: 4,
-    borderRadius: 8,
+    marginVertical: 8,
+    borderRadius: 12,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  propertyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   propertyTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
+    flex: 1,
+    marginRight: 8,
   },
-  emptySection: {
-    backgroundColor: 'white',
-    marginHorizontal: 16,
-    marginVertical: 4,
-    borderRadius: 8,
-    padding: 24,
-    alignItems: 'center',
-  },
-  emptyText: {
+  propertyDescription: {
     fontSize: 14,
     color: '#666',
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  linkText: {
+    fontSize: 12,
+    color: '#e74f30',
     fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#666',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 16,
+    color: '#999',
+    marginTop: 8,
+    textAlign: 'center',
   },
 });
