@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useState } from 'react';
 import { Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -170,6 +171,16 @@ export default function TabLayout() {
     router.push('/(tabs)/properties');
   };
 
+  const navigateToAbout = () => {
+    toggleSidebar();
+    router.push('/(tabs)/about');
+  };
+
+  const openFaiWebsite = async () => {
+    toggleSidebar();
+    await WebBrowser.openBrowserAsync('https://www.fondoambiente.it/');
+  };
+
   return (
     <View style={{ flex: 1 }}>
       {/* Sidebar Overlay */}
@@ -196,6 +207,20 @@ export default function TabLayout() {
           >
             <Ionicons name="list" size={20} color="#e74f30" style={styles.menuItemIcon} />
             <Text style={styles.menuItemText}>Elenco Luoghi</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={navigateToAbout}
+          >
+            <Ionicons name="information-circle-outline" size={20} color="#e74f30" style={styles.menuItemIcon} />
+            <Text style={styles.menuItemText}>About</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={openFaiWebsite}
+          >
+            <Ionicons name="globe" size={20} color="#e74f30" style={styles.menuItemIcon} />
+            <Text style={styles.menuItemText}>Sito FAI</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -232,6 +257,15 @@ export default function TabLayout() {
           options={{
             title: 'Tessera FAI',
             tabBarIcon: ({ color }) => <IconSymbol size={28} name="creditcard.fill" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="about"
+          options={{
+            title: 'About',
+            href: null, // Hide from tab bar, only accessible via sidebar
+            tabBarStyle: { display: 'none' }, // Hide tab bar on this screen
+            headerShown: false, // Use custom header in the component
           }}
         />
         <Tabs.Screen
